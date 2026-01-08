@@ -1,0 +1,342 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>XYETAGAME</title>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            height: 100vh;
+            overflow: hidden;
+            background: linear-gradient(to bottom, #87CEEB, #4682B4, #1e3c72);
+            color: white;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+        }
+
+        .screen {
+            position: absolute;
+            top: 0; left: 0; right: 0; bottom: 0;
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+        .screen.active { display: flex; }
+
+        h1 {
+            font-size: 48px;
+            margin: 20px 0;
+            background: linear-gradient(45deg, #ffffff, #00ffff);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            text-shadow: 0 0 30px rgba(255,255,255,0.8);
+        }
+
+        .stats {
+            font-size: 22px;
+            margin: 20px 0;
+            display: flex;
+            gap: 30px;
+        }
+        .coin { color: #ffd700; text-shadow: 0 0 15px #ffd700; }
+
+        .btn {
+            padding: 18px 36px;
+            font-size: 24px;
+            border: none;
+            border-radius: 25px;
+            background: linear-gradient(45deg, #ff0080, #00f0ff);
+            color: white;
+            font-weight: bold;
+            cursor: pointer;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.4);
+            margin: 10px;
+        }
+        .btn:active { transform: scale(0.95); }
+
+        .shop-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            padding: 20px;
+            max-width: 600px;
+        }
+        .shop-item {
+            background: rgba(255,255,255,0.2);
+            border-radius: 20px;
+            padding: 20px;
+            text-align: center;
+            border: 2px solid rgba(255,255,255,0.5);
+            backdrop-filter: blur(12px);
+        }
+        .ball-preview {
+            width: 60px; height: 60px;
+            border-radius: 50%;
+            margin: 15px auto;
+            box-shadow: 0 0 30px white;
+        }
+
+        canvas {
+            border-radius: 20px;
+            box-shadow: 0 0 50px rgba(255,255,255,0.8);
+            background: radial-gradient(circle, #0a1a3a, #0f172a);
+            max-width: 95vw;
+            max-height: 70vh;
+        }
+
+        #controls {
+            margin-top: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 20px;
+        }
+        .arrows { display: flex; gap: 40px; }
+        .ctrl { 
+            width: 90px; height: 90px; border-radius: 50%; font-size: 40px;
+            background: linear-gradient(45deg, rgba(255,0,128,0.8), rgba(0,255,255,0.8));
+            border: 3px solid rgba(255,255,255,0.6);
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+            display: flex; align-items: center; justify-content: center;
+            touch-action: manipulation;
+            user-select: none;
+        }
+        .ctrl:active { transform: scale(0.9); }
+        #exit { 
+            width: 260px; height: 70px; border-radius: 35px; background: rgba(255,0,0,0.8);
+            font-size: 28px; font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+
+    <div id="menu" class="screen active">
+        <h1>XYETAGAME</h1>
+        <div class="stats">
+            <span>⭐ Побед: <span id="wins">0</span></span>
+            <span class="coin">🪙 <span id="coins">1000</span></span>
+        </div>
+        <button class="btn" onclick="startGame()">ИГРАТЬ</button>
+        <button class="btn" onclick="showScreen('shop')">🛒 Магазин</button>
+    </div>
+
+    <div id="shop" class="screen">
+        <button class="btn" style="position:absolute;top:20px;left:20px;" onclick="showScreen('menu')">← Назад</button>
+        <h1>🛒 Магазин шаров</h1>
+        <div class="shop-grid">
+            <div class="shop-item" onclick="selectBall(0)">
+                <div class="ball-preview" style="background: radial-gradient(#00ffff, #0080ff);"></div>
+                <div>Классика</div>
+                <div>Бесплатно</div>
+            </div>
+            <div class="shop-item" id="s1" onclick="buyBall(1)">
+                <div class="ball-preview" style="background: linear-gradient(45deg, #ff00ff, #ff0080);"></div>
+                <div>Розовый неон</div>
+                <div id="p1">🪙 5000</div>
+            </div>
+            <div class="shop-item" id="s2" onclick="buyBall(2)">
+                <div class="ball-preview" style="background: radial-gradient(#ffd700, #ffaa00);"></div>
+                <div>Золотой</div>
+                <div id="p2">🪙 8000</div>
+            </div>
+            <div class="shop-item" id="s3" onclick="buyBall(3)">
+                <div class="ball-preview" style="background: linear-gradient(45deg, #00ff88, #00cc66);"></div>
+                <div>Изумруд</div>
+                <div id="p3">🪙 12000</div>
+            </div>
+        </div>
+    </div>
+
+    <div id="game" class="screen">
+        <div style="position:absolute;top:30px;left:50%;transform:translateX(-50%);font-size:48px;text-shadow:0 0 20px white;z-index:10;">
+            <span id="score">0 : 0</span>
+        </div>
+        <canvas id="canvas"></canvas>
+        <div id="controls">
+            <div class="arrows">
+                <div class="ctrl" id="up">↑</div>
+                <div class="ctrl" id="down">↓</div>
+            </div>
+            <div class="ctrl" id="exit">ВЫЙТИ</div>
+        </div>
+    </div>
+
+    <script>
+        const tg = window.Telegram.WebApp; tg.ready(); tg.expand();
+
+        // СОХРАНЕНИЕ
+        let player = { coins: 1000, wins: 0, ownedBalls: [0], currentBall: 0 };
+        const PRICES = [0, 5000, 8000, 12000];
+        const balls = [
+            ['#00ffff', '#0080ff', '#00ffff'],
+            ['#ff00ff', '#ff0080', '#ff00ff'],
+            ['#ffd700', '#ffaa00', '#ffd700'],
+            ['#00ff88', '#00cc66', '#00ff88']
+        ];
+
+        function load() {
+            const s = localStorage.getItem('xyetagame');
+            if (s) player = JSON.parse(s);
+        }
+        function save() { localStorage.setItem('xyetagame', JSON.stringify(player)); }
+        load();
+
+        function updateUI() {
+            document.getElementById('wins').textContent = player.wins;
+            document.getElementById('coins').textContent = player.coins;
+            for (let i=1; i<=3; i++) {
+                const el = document.getElementById('p'+i);
+                if (player.ownedBalls.includes(i)) {
+                    el.textContent = 'Куплен!';
+                    el.style.color = '#ffd700';
+                    document.getElementById('s'+i).onclick = () => selectBall(i);
+                } else el.textContent = `🪙 ${PRICES[i]}`;
+            }
+        }
+
+        function selectBall(i) { player.currentBall = i; save(); tg.HapticFeedback.notificationOccurred('success'); }
+        function buyBall(i) {
+            if (player.ownedBalls.includes(i)) return selectBall(i);
+            if (player.coins >= PRICES[i]) {
+                player.coins -= PRICES[i];
+                player.ownedBalls.push(i);
+                selectBall(i);
+                updateUI(); save();
+                tg.HapticFeedback.notificationOccurred('success');
+            } else tg.HapticFeedback.notificationOccurred('error');
+        }
+
+        function showScreen(id) {
+            document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+            document.getElementById(id).classList.add('active');
+            if (id !== 'game') updateUI();
+        }
+
+        // ИГРА — ИСПРАВЛЕНО!
+        const canvas = document.getElementById('canvas');
+        const gtx = canvas.getContext('2d');
+        const W = 600, H = 450;
+        canvas.width = W; canvas.height = H;
+
+        let game = { py: H/2-50, ay: H/2-50, bx: W/2, by: H/2, vx: 3, vy: 2, ps: 0, as: 0 };
+        let running = false;
+
+        // ПЛАВНОЕ ДВИЖЕНИЕ
+        let moveUp = false;
+        let moveDown = false;
+        const PADDLE_SPEED = 8;
+
+        const upBtn = document.getElementById('up');
+        const downBtn = document.getElementById('down');
+
+        upBtn.addEventListener('mousedown', () => moveUp = true);
+        upBtn.addEventListener('touchstart', (e) => { e.preventDefault(); moveUp = true; });
+        upBtn.addEventListener('mouseup', () => moveUp = false);
+        upBtn.addEventListener('touchend', () => moveUp = false);
+        upBtn.addEventListener('mouseleave', () => moveUp = false);
+
+        downBtn.addEventListener('mousedown', () => moveDown = true);
+        downBtn.addEventListener('touchstart', (e) => { e.preventDefault(); moveDown = true; });
+        downBtn.addEventListener('mouseup', () => moveDown = false);
+        downBtn.addEventListener('touchend', () => moveDown = false);
+        downBtn.addEventListener('mouseleave', () => moveDown = false);
+
+        function reset() {
+            game.bx = W/2; game.by = H/2;
+            game.vx = (Math.random()>0.5?1:-1)*3;
+            game.vy = (Math.random()>0.5?1:-1)*2;
+        }
+
+        function update() {
+            if (!running) return;
+
+            // ПЛАВНОЕ ДВИЖЕНИЕ ПРИ ЗАЖАТИИ
+            if (moveUp) game.py -= PADDLE_SPEED;
+            if (moveDown) game.py += PADDLE_SPEED;
+            game.py = Math.max(0, Math.min(H-100, game.py));
+
+            // МЯЧ
+            game.bx += game.vx; 
+            game.by += game.vy;
+
+            // ОТСКОКИ ОТ СТЕН
+            if (game.by <= 20 || game.by >= H-20) game.vy *= -1.02;
+
+            // ОТСКОК ОТ ИГРОКА (ЛЕВАЯ ПЛАТФОРМА)
+            if (game.bx <= 45 && Math.abs(game.by - (game.py + 50)) < 55) {
+                game.vx = Math.abs(game.vx) * 1.03;
+                tg.HapticFeedback.impactOccurred('light');
+            }
+            // ОТСКОК ОТ БОТА (ПРАВАЯ ПЛАТФОРМА) — ТОЛЬКО ЕСЛИ ПОПАЛ!
+            else if (game.bx >= W - 45 && Math.abs(game.by - (game.ay + 50)) < 55) {
+                game.vx = -Math.abs(game.vx) * 1.03;
+                tg.HapticFeedback.impactOccurred('light');
+            }
+
+            // ОЧКИ
+            if (game.bx < 0) { 
+                game.as++; 
+                reset(); 
+                tg.HapticFeedback.notificationOccurred('error');
+            }
+            if (game.bx > W) { 
+                game.ps++;
+                player.coins += 50;
+                player.wins++;
+                save();
+                updateUI();
+                reset();
+                tg.HapticFeedback.notificationOccurred('success');
+            }
+
+            // БОТ — НОРМАЛЬНЫЙ, НО С ПРИМАНКАМИ
+            const mistake = (Math.random() - 0.5) * 80;  // ±80 пикселей — промахивается
+            const target = game.by + mistake;
+            if (game.ay + 50 < target) game.ay += 5;
+            if (game.ay + 50 > target) game.ay -= 5;
+            game.ay = Math.max(0, Math.min(H-100, game.ay));
+
+            document.getElementById('score').textContent = `${game.ps} : ${game.as}`;
+        }
+
+        function draw() {
+            gtx.fillStyle = '#0a1a3a'; gtx.fillRect(0,0,W,H);
+            gtx.strokeStyle = 'rgba(255,255,255,0.5)'; gtx.lineWidth = 4;
+            gtx.setLineDash([20,20]); gtx.beginPath(); gtx.moveTo(W/2,0); gtx.lineTo(W/2,H); gtx.stroke(); gtx.setLineDash([]);
+            
+            // ПЛАТФОРМА ИГРОКА (зелёная)
+            gtx.shadowColor = '#00ff88'; gtx.shadowBlur = 20;
+            gtx.fillStyle = '#00ff88'; gtx.fillRect(30, game.py, 18, 100);
+            
+            // ПЛАТФОРМА БОТА (розовая)
+            gtx.shadowColor = '#ff0080'; gtx.shadowBlur = 20;
+            gtx.fillStyle = '#ff0080'; gtx.fillRect(W-48, game.ay, 18, 100);
+            gtx.shadowBlur = 0;
+
+            // ШАР
+            const b = balls[player.currentBall];
+            const grad = gtx.createRadialGradient(game.bx, game.by, 0, game.bx, game.by, 20);
+            grad.addColorStop(0, b[0]); grad.addColorStop(0.7, b[1]);
+            gtx.shadowColor = b[2]; gtx.shadowBlur = 40;
+            gtx.fillStyle = grad;
+            gtx.beginPath(); gtx.arc(game.bx, game.by, 20, 0, Math.PI*2); gtx.fill();
+        }
+
+        function loop() { update(); draw(); if (running) requestAnimationFrame(loop); }
+
+        function startGame() {
+            showScreen('game');
+            moveUp = false; moveDown = false;
+            game = { py: H/2-50, ay: H/2-50, bx: W/2, by: H/2, vx: 3, vy: 2, ps: 0, as: 0 };
+            running = true; reset(); loop();
+        }
+
+        document.getElementById('exit').onclick = () => { running = false; showScreen('menu'); };
+
+        updateUI();
+    </script>
+</body>
+</html>
